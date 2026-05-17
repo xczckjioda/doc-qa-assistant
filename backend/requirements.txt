@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+python-multipart
+pymupdf
+chromadb
+sentence-transformers
+rank-bm25
+google-generativeai
+langchain-google-genai
+langchain-huggingface
+ragas
+python-dotenv
+pydantic

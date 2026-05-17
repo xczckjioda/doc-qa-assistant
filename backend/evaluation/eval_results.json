@@ -1,0 +1,40 @@
+{
+  "metrics_mean": {
+    "faithfulness": 1.0,
+    "answer_relevancy": 0.9982249908126103,
+    "context_recall": 1.0,
+    "context_precision": 0.9999999999
+  },
+  "results": [
+    {
+      "user_input": "What were the estimated Traitor Legion losses during the battles of Isstvan, Phall and Paramar systems?",
+      "retrieved_contexts": [
+        "Hard facts regarding operational Legiones Astartes numbers are impossible to ascertain, but credible estimates place Traitor losses during the battles of the Isstvan, Phall and Paramar systems in the region of 100,000 Legiones Astartes fatalities, compared to an unknown number, perhaps three to four times as high, as a death toll for those who remained loyal to the Emperor.",
+        "the cataclysm unscathed which, combined with losses suffered during the recent purging of the Traitors’ ranks at Isstvan III and elsewhere, had weakened Horus’ position from its notional strength when the die for war was cast.",
+        "Eight of the eighteen Legions were now pledged to the Warmaster’s cause, with the disposition of a ninth, that would later join him, as then unknown. As for the rest, three of those Legions known to have remained loyal had been wrecked upon the black sands of Isstvan V, victims of the Dropsite Massacre, a most grievous ambush wrought by the hand of Horus himself, while a greater part of a fourth had been ravaged in bloody void battle in the Phall system.",
+        "M31, terrifying reports, quickly suppressed, reached the governing courts and councils of the Coronid Deeps that the unthinkable had occurred; that the Traitors had crushed those sent to bring them to heel at Isstvan V. These reports were at first scoffed at and wilfully disbelieved, until the first few battered ships, Loyalist survivors of the void battle at Isstvan, began to limp brokenly in, seeking sanctuary from the hounds of Horus at their heels.",
+        "Though the roll call of Space Marine Legions, Titan Legio, Auxilia regiments and Mechanicum Taghmata that sided with the Arch-Traitor and those who remained loyal is largely known and accepted, the full truth is far more complex and far more mysterious than commonly believed. Of those who fell at Isstvan, there were survivors, remnants and fleeing fragments shorn of command and driven half mad by treachery; from that point onwards they were isolated, alone."
+      ],
+      "response": "Credible estimates place Traitor Legion losses during the battles of the Isstvan, Phall, and Paramar systems in the region of 100,000 Legiones Astartes fatalities.",
+      "reference": "Credible estimates place Traitor losses in the region of 100,000 Legiones Astartes fatalities during the battles of the Isstvan, Phall and Paramar systems.",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.9982249908126103,
+      "context_recall": 1.0,
+      "context_precision": 0.9999999999
+    }
+  ],
+  "rag_records": [
+    {
+      "question": "What were the estimated Traitor Legion losses during the battles of Isstvan, Phall and Paramar systems?",
+      "answer": "Credible estimates place Traitor Legion losses during the battles of the Isstvan, Phall, and Paramar systems in the region of 100,000 Legiones Astartes fatalities.",
+      "contexts": [
+        "Hard facts regarding operational Legiones Astartes numbers are impossible to ascertain, but credible estimates place Traitor losses during the battles of the Isstvan, Phall and Paramar systems in the region of 100,000 Legiones Astartes fatalities, compared to an unknown number, perhaps three to four times as high, as a death toll for those who remained loyal to the Emperor.",
+        "the cataclysm unscathed which, combined with losses suffered during the recent purging of the Traitors’ ranks at Isstvan III and elsewhere, had weakened Horus’ position from its notional strength when the die for war was cast.",
+        "Eight of the eighteen Legions were now pledged to the Warmaster’s cause, with the disposition of a ninth, that would later join him, as then unknown. As for the rest, three of those Legions known to have remained loyal had been wrecked upon the black sands of Isstvan V, victims of the Dropsite Massacre, a most grievous ambush wrought by the hand of Horus himself, while a greater part of a fourth had been ravaged in bloody void battle in the Phall system.",
+        "M31, terrifying reports, quickly suppressed, reached the governing courts and councils of the Coronid Deeps that the unthinkable had occurred; that the Traitors had crushed those sent to bring them to heel at Isstvan V. These reports were at first scoffed at and wilfully disbelieved, until the first few battered ships, Loyalist survivors of the void battle at Isstvan, began to limp brokenly in, seeking sanctuary from the hounds of Horus at their heels.",
+        "Though the roll call of Space Marine Legions, Titan Legio, Auxilia regiments and Mechanicum Taghmata that sided with the Arch-Traitor and those who remained loyal is largely known and accepted, the full truth is far more complex and far more mysterious than commonly believed. Of those who fell at Isstvan, there were survivors, remnants and fleeing fragments shorn of command and driven half mad by treachery; from that point onwards they were isolated, alone."
+      ],
+      "ground_truth": "Credible estimates place Traitor losses in the region of 100,000 Legiones Astartes fatalities during the battles of the Isstvan, Phall and Paramar systems."
+    }
+  ]
+}

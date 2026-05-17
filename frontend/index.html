@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RAG Assistant</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-zinc-950 text-zinc-100">
+  <main class="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-5 py-6">
+    <header class="mb-6 flex flex-col gap-3 border-b border-zinc-800 pb-5 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold text-white">RAG Assistant</h1>
+        <p class="mt-1 text-sm text-zinc-400">Upload, ask, inspect retrieval, and run RAGAS evaluation.</p>
+      </div>
+      <div class="rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-400">
+        Backend: <span class="font-mono text-emerald-300">http://localhost:8000</span>
+      </div>
+    </header>
+
+    <nav class="mb-5 flex w-fit rounded-md border border-zinc-800 bg-zinc-900 p-1">
+      <button id="uploadTab" class="rounded px-4 py-2 text-sm font-medium text-white bg-zinc-800" type="button">Upload</button>
+      <button id="askTab" class="rounded px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white" type="button">Ask</button>
+      <button id="evalTab" class="rounded px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white" type="button">Evaluate</button>
+    </nav>
+
+    <section id="uploadPanel" class="grid gap-5">
+      <div class="rounded-md border border-zinc-800 bg-zinc-900 p-4">
+        <div id="dropZone" class="flex min-h-72 cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed border-zinc-700 bg-zinc-950 px-6 py-10 text-center transition hover:border-emerald-500">
+          <input id="pdfInput" class="hidden" type="file" accept="application/pdf,.pdf" />
+          <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 text-xl text-emerald-300">PDF</div>
+          <h2 class="text-lg font-semibold text-white">Drop a PDF here</h2>
+          <p class="mt-2 max-w-md text-sm leading-6 text-zinc-400">or click to choose a file. The file will be sent to POST /upload and indexed into Chroma.</p>
+          <p id="selectedFile" class="mt-4 font-mono text-xs text-zinc-500">No file selected</p>
+        </div>
+        <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p id="uploadStatus" class="text-sm text-zinc-400">Ready.</p>
+          <button id="uploadButton" class="h-10 rounded-md bg-emerald-500 px-5 text-sm font-semibold text-zinc-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60" type="button" disabled>
+            Upload PDF
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section id="askPanel" class="hidden grid gap-5 lg:grid-cols-[1fr_280px]">
+      <div class="grid gap-5">
+        <div class="rounded-md border border-zinc-800 bg-zinc-900 p-4">
+          <div class="grid gap-4">
+            <label class="grid gap-2">
+              <span class="text-sm font-medium text-zinc-300">File scope</span>
+              <select id="fileSelect" class="h-11 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-emerald-500">
+                <option value="">All files</option>
+              </select>
+            </label>
+            <div class="grid gap-2">
+              <span class="text-sm font-medium text-zinc-300">Question</span>
+              <div class="flex gap-3">
+                <input id="questionInput" class="h-11 min-w-0 flex-1 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-emerald-500" placeholder="Ask a question about your documents" />
+                <button id="askButton" class="h-11 shrink-0 rounded-md bg-emerald-500 px-5 text-sm font-semibold text-zinc-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60" type="button">
+                  Send
+                </button>
+              </div>
+              <span id="rewrittenHint" class="min-h-5 text-xs text-zinc-500">Rewritten: -</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-md border border-zinc-800 bg-zinc-900 p-4">
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <h2 class="text-base font-semibold text-white">LLM Answer</h2>
+            <span id="askStatus" class="text-xs text-zinc-500"></span>
+          </div>
+          <div class="mb-3 grid gap-2 md:grid-cols-2">
+            <div class="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
+              <div class="text-xs font-medium uppercase text-zinc-500">Original Query</div>
+              <div id="originalQueryTag" class="mt-1 text-sm text-zinc-200">-</div>
+            </div>
+            <div class="rounded-md border border-emerald-900 bg-emerald-950/40 px-3 py-2">
+              <div class="text-xs font-medium uppercase text-emerald-500">Rewritten Query</div>
+              <div id="rewrittenQueryTag" class="mt-1 text-sm text-emerald-100">-</div>
+            </div>
+          </div>
+          <div id="answerBox" class="min-h-24 whitespace-pre-wrap rounded-md border border-zinc-800 bg-zinc-950 p-4 text-sm leading-6 text-zinc-300">Waiting for a question.</div>
+        </div>
+
+        <div class="rounded-md border border-zinc-800 bg-zinc-900 p-4">
+          <div class="mb-3 flex items-center justify-between">
+            <h2 class="text-base font-semibold text-white">Retrieved Chunks</h2>
+            <span id="chunkCount" class="text-xs text-zinc-500">0 items</span>
+          </div>
+          <div id="chunksList" class="grid gap-3"></div>
+        </div>
+      </div>
+
+      <aside class="h-fit rounded-md border border-zinc-800 bg-zinc-900 p-4 lg:sticky lg:top-5">
+        <h2 class="text-base font-semibold text-white">Related Questions</h2>
+        <p id="suggestedStatus" class="mt-1 text-xs text-zinc-500">Ask a question to see suggestions.</p>
+        <div id="suggestedQuestions" class="mt-4 grid gap-2"></div>
+      </aside>
+    </section>
+
+    <section id="evalPanel" class="hidden grid gap-5">
+      <div class="rounded-md border border-zinc-800 bg-zinc-900 p-4">
+        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 class="text-base font-semibold text-white">RAGAS Dataset</h2>
+          <div class="flex gap-2">
+            <button id="addEvalRow" class="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:border-zinc-500" type="button">Add row</button>
+            <button id="runEval" class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60" type="button">Run evaluation</button>
+          </div>
+        </div>
+        <div id="evalRows" class="grid gap-3"></div>
+      </div>
+
+      <div class="rounded-md border border-zinc-800 bg-zinc-900 p-4">
+        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 class="text-base font-semibold text-white">Evaluation Results</h2>
+            <p id="evalStatus" class="mt-1 text-xs text-zinc-500">Not run yet.</p>
+          </div>
+          <button id="exportEval" class="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled>Export JSON</button>
+        </div>
+        <div id="metricGrid" class="grid gap-3 md:grid-cols-2"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const API_BASE = "http://localhost:8000";
+    const metrics = ["faithfulness", "answer_relevancy", "context_recall", "context_precision"];
+    let latestEvalResult = null;
+    let selectedPdf = null;
+
+    const uploadTab = document.getElementById("uploadTab");
+    const askTab = document.getElementById("askTab");
+    const evalTab = document.getElementById("evalTab");
+    const uploadPanel = document.getElementById("uploadPanel");
+    const askPanel = document.getElementById("askPanel");
+    const evalPanel = document.getElementById("evalPanel");
+    const dropZone = document.getElementById("dropZone");
+    const pdfInput = document.getElementById("pdfInput");
+    const selectedFile = document.getElementById("selectedFile");
+    const uploadButton = document.getElementById("uploadButton");
+    const uploadStatus = document.getElementById("uploadStatus");
+    const fileSelect = document.getElementById("fileSelect");
+    const questionInput = document.getElementById("questionInput");
+    const rewrittenHint = document.getElementById("rewrittenHint");
+    const askButton = document.getElementById("askButton");
+    const askStatus = document.getElementById("askStatus");
+    const originalQueryTag = document.getElementById("originalQueryTag");
+    const rewrittenQueryTag = document.getElementById("rewrittenQueryTag");
+    const answerBox = document.getElementById("answerBox");
+    const chunksList = document.getElementById("chunksList");
+    const chunkCount = document.getElementById("chunkCount");
+    const suggestedStatus = document.getElementById("suggestedStatus");
+    const suggestedQuestions = document.getElementById("suggestedQuestions");
+    const evalRows = document.getElementById("evalRows");
+    const addEvalRow = document.getElementById("addEvalRow");
+    const runEval = document.getElementById("runEval");
+    const evalStatus = document.getElementById("evalStatus");
+    const metricGrid = document.getElementById("metricGrid");
+    const exportEval = document.getElementById("exportEval");
+
+    function setActiveTab(tab) {
+      uploadPanel.classList.toggle("hidden", tab !== "upload");
+      askPanel.classList.toggle("hidden", tab !== "ask");
+      evalPanel.classList.toggle("hidden", tab !== "eval");
+      uploadTab.className = tab === "upload" ? activeTabClass() : inactiveTabClass();
+      askTab.className = tab === "ask" ? activeTabClass() : inactiveTabClass();
+      evalTab.className = tab === "eval" ? activeTabClass() : inactiveTabClass();
+    }
+
+    function activeTabClass() {
+      return "rounded px-4 py-2 text-sm font-medium text-white bg-zinc-800";
+    }
+
+    function inactiveTabClass() {
+      return "rounded px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white";
+    }
+
+    function setSelectedFile(file) {
+      if (!file) return;
+      if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+        uploadStatus.textContent = "Upload failed: please choose a PDF file.";
+        uploadStatus.className = "text-sm text-red-300";
+        return;
+      }
+      selectedPdf = file;
+      selectedFile.textContent = file.name;
+      uploadButton.disabled = false;
+      uploadStatus.textContent = "Ready to upload.";
+      uploadStatus.className = "text-sm text-zinc-400";
+    }
+
+    async function uploadPdf() {
+      if (!selectedPdf) return;
+      uploadButton.disabled = true;
+      uploadStatus.textContent = "Uploading...";
+      uploadStatus.className = "text-sm text-amber-300";
+
+      const formData = new FormData();
+      formData.append("file", selectedPdf);
+
+      try {
+        const response = await fetch(`${API_BASE}/upload`, {
+          method: "POST",
+          body: formData,
+        });
+        if (!response.ok) throw new Error(await response.text());
+        const data = await response.json();
+        uploadStatus.textContent = `Upload succeeded: ${data.filename || selectedPdf.name}`;
+        uploadStatus.className = "text-sm text-emerald-300";
+        await loadFiles();
+        if (data.filename) fileSelect.value = data.filename;
+      } catch (error) {
+        uploadStatus.textContent = `Upload failed: ${error.message || String(error)}`;
+        uploadStatus.className = "text-sm text-red-300";
+      } finally {
+        uploadButton.disabled = !selectedPdf;
+      }
+    }
+
+    async function loadFiles() {
+      try {
+        const currentValue = fileSelect.value;
+        const response = await fetch(`${API_BASE}/files`);
+        if (!response.ok) throw new Error(await response.text());
+        const data = await response.json();
+        fileSelect.innerHTML = `<option value="">All files</option>`;
+        (data.files || []).forEach((fileName) => {
+          const option = document.createElement("option");
+          option.value = fileName;
+          option.textContent = fileName;
+          fileSelect.appendChild(option);
+        });
+        if ([...fileSelect.options].some((option) => option.value === currentValue)) {
+          fileSelect.value = currentValue;
+        }
+      } catch (error) {
+        askStatus.textContent = "Failed to load files";
+      }
+    }
+
+    async function askQuestion() {
+      const query = questionInput.value.trim();
+      if (!query) {
+        questionInput.focus();
+        return;
+      }
+
+      askButton.disabled = true;
+      askStatus.textContent = "Retrieving and generating...";
+      rewrittenHint.textContent = "Rewritten: -";
+      originalQueryTag.textContent = query;
+      rewrittenQueryTag.textContent = "-";
+      answerBox.textContent = "";
+      chunksList.innerHTML = "";
+      chunkCount.textContent = "0 items";
+      renderSuggestedQuestions([]);
+
+      try {
+        const response = await fetch(`${API_BASE}/ask`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query,
+            top_k: 5,
+            file_name: fileSelect.value || null,
+          }),
+        });
+        if (!response.ok) throw new Error(await response.text());
+        const data = await response.json();
+        const rewrittenQuery = data.rewritten_query || query;
+        rewrittenHint.textContent = `Rewritten: ${rewrittenQuery}`;
+        rewrittenQueryTag.textContent = rewrittenQuery;
+        answerBox.textContent = data.answer || "No answer.";
+        renderChunks(data.results || []);
+        renderSuggestedQuestions(data.suggested_questions || []);
+        askStatus.textContent = "Done";
+      } catch (error) {
+        answerBox.textContent = error.message || String(error);
+        askStatus.textContent = "Request failed";
+      } finally {
+        askButton.disabled = false;
+      }
+    }
+
+    function renderChunks(chunks) {
+      chunkCount.textContent = `${chunks.length} items`;
+      chunksList.innerHTML = "";
+
+      if (!chunks.length) {
+        chunksList.innerHTML = `<div class="rounded-md border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-500">No chunks returned.</div>`;
+        return;
+      }
+
+      chunks.forEach((chunk, index) => {
+        const score = typeof chunk.rerank_score === "number" ? chunk.rerank_score.toFixed(4) : "N/A";
+        const details = document.createElement("details");
+        details.className = "rounded-md border border-zinc-800 bg-zinc-950";
+        if (index === 0) details.open = true;
+        details.innerHTML = `
+          <summary class="cursor-pointer list-none px-4 py-3">
+            <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div class="min-w-0">
+                <div class="truncate text-sm font-medium text-zinc-100">${escapeHtml(chunk.file_name || "unknown")}</div>
+                <div class="mt-1 text-xs text-zinc-500">Page ${escapeHtml(String(chunk.page ?? "N/A"))}</div>
+              </div>
+              <div class="rounded border border-emerald-900 bg-emerald-950 px-2 py-1 font-mono text-xs text-emerald-300">rerank ${score}</div>
+            </div>
+          </summary>
+          <div class="border-t border-zinc-800 px-4 py-3 text-sm leading-6 text-zinc-300">${escapeHtml(chunk.text || "")}</div>
+        `;
+        chunksList.appendChild(details);
+      });
+    }
+
+    function renderSuggestedQuestions(questions) {
+      suggestedQuestions.innerHTML = "";
+
+      if (!questions.length) {
+        suggestedStatus.textContent = "No suggestions yet.";
+        return;
+      }
+
+      suggestedStatus.textContent = "Click a question to ask it.";
+      questions.slice(0, 3).forEach((question) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-left text-sm leading-5 text-zinc-200 hover:border-emerald-700 hover:text-emerald-200";
+        button.textContent = question;
+        button.addEventListener("click", () => {
+          questionInput.value = question;
+          setActiveTab("ask");
+          askQuestion();
+        });
+        suggestedQuestions.appendChild(button);
+      });
+    }
+
+    function addRow(question = "", groundTruth = "") {
+      const row = document.createElement("div");
+      row.className = "grid gap-3 rounded-md border border-zinc-800 bg-zinc-950 p-3 md:grid-cols-[1fr_1fr_auto]";
+      row.innerHTML = `
+        <textarea class="question min-h-24 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-emerald-500" placeholder="question">${escapeHtml(question)}</textarea>
+        <textarea class="ground-truth min-h-24 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-emerald-500" placeholder="ground_truth">${escapeHtml(groundTruth)}</textarea>
+        <button class="remove-row h-10 rounded-md border border-zinc-700 px-3 text-sm text-zinc-300 hover:border-red-500 hover:text-red-300 md:self-start" type="button">Delete</button>
+      `;
+      row.querySelector(".remove-row").addEventListener("click", () => {
+        row.remove();
+        if (!evalRows.children.length) addRow();
+      });
+      evalRows.appendChild(row);
+    }
+
+    async function runEvaluation() {
+      const rows = [...evalRows.children].map((row) => ({
+        question: row.querySelector(".question").value.trim(),
+        ground_truth: row.querySelector(".ground-truth").value.trim(),
+      })).filter((item) => item.question && item.ground_truth);
+
+      if (!rows.length) {
+        evalStatus.textContent = "Add at least one question and ground_truth pair.";
+        return;
+      }
+
+      runEval.disabled = true;
+      exportEval.disabled = true;
+      evalStatus.textContent = "Running RAGAS evaluation...";
+      renderMetrics({});
+
+      try {
+        const response = await fetch(`${API_BASE}/evaluate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(rows),
+        });
+        if (!response.ok) throw new Error(await response.text());
+        latestEvalResult = await response.json();
+        if (latestEvalResult.success === false) {
+          evalStatus.textContent = latestEvalResult.error || "Evaluation failed.";
+          renderMetrics({});
+          return;
+        }
+        renderMetrics(latestEvalResult.metrics || latestEvalResult);
+        exportEval.disabled = false;
+        evalStatus.textContent = "Evaluation complete";
+      } catch (error) {
+        latestEvalResult = null;
+        evalStatus.textContent = error.message || String(error);
+      } finally {
+        runEval.disabled = false;
+      }
+    }
+
+    function renderMetrics(values) {
+      metricGrid.innerHTML = "";
+      metrics.forEach((name) => {
+        const rawValue = values[name];
+        const value = typeof rawValue === "number" ? rawValue : 0;
+        const percent = Math.max(0, Math.min(100, value * 100));
+        const card = document.createElement("div");
+        card.className = "rounded-md border border-zinc-800 bg-zinc-950 p-4";
+        card.innerHTML = `
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <span class="text-sm font-medium text-zinc-200">${name}</span>
+            <span class="font-mono text-sm text-emerald-300">${typeof rawValue === "number" ? rawValue.toFixed(4) : "N/A"}</span>
+          </div>
+          <div class="h-2 overflow-hidden rounded-full bg-zinc-800">
+            <div class="h-full rounded-full bg-emerald-400" style="width: ${percent}%"></div>
+          </div>
+        `;
+        metricGrid.appendChild(card);
+      });
+    }
+
+    function exportEvaluation() {
+      if (!latestEvalResult) return;
+      const blob = new Blob([JSON.stringify(latestEvalResult, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "ragas_eval_results.json";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    uploadTab.addEventListener("click", () => setActiveTab("upload"));
+    askTab.addEventListener("click", () => setActiveTab("ask"));
+    evalTab.addEventListener("click", () => setActiveTab("eval"));
+    dropZone.addEventListener("click", () => pdfInput.click());
+    dropZone.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      dropZone.classList.add("border-emerald-500");
+    });
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("border-emerald-500");
+    });
+    dropZone.addEventListener("drop", (event) => {
+      event.preventDefault();
+      dropZone.classList.remove("border-emerald-500");
+      setSelectedFile(event.dataTransfer.files[0]);
+    });
+    pdfInput.addEventListener("change", () => setSelectedFile(pdfInput.files[0]));
+    uploadButton.addEventListener("click", uploadPdf);
+    askButton.addEventListener("click", askQuestion);
+    questionInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) askQuestion();
+    });
+    addEvalRow.addEventListener("click", () => addRow());
+    runEval.addEventListener("click", runEvaluation);
+    exportEval.addEventListener("click", exportEvaluation);
+
+    addRow();
+    renderMetrics({});
+    loadFiles();
+  </script>
+</body>
+</html>
